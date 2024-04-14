@@ -35,7 +35,6 @@ export const registerSlice = createSlice({
       })
       .addCase(DangKyTaiKhoan.fulfilled, (state, action) => {
         state.registerStatus = 'succeeded';
-        // console.log(state.registerStatus);
         state.registerData = action.payload; // Gán dữ liệu người dùng từ action.payload
       })
       .addCase(DangKyTaiKhoan.rejected, (state, action) => {

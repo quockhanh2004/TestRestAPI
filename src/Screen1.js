@@ -1,12 +1,32 @@
+import {useDispatch, useSelector} from 'react-redux';
+import {getMethod, clearDataGet} from './redux/getMethod_reducer';
+import {postMethod, clearDataPost} from './redux/postMethod_reducer';
+import {putMethod, clearDataPut} from './redux/putMethod_reducer';
+import {deleteMethod, clearDataDelete} from './redux/deleteMethod_reducer';
+
 import {Button, Text, View, Picker, TextField} from 'react-native-ui-lib';
 import * as React from 'react';
 import InputView from './InputView';
 import {ScrollView, TextInput} from 'react-native';
-import ParameterInput from './ParameterInput';
-import AxiosInstance from './AxiosInstance';
+import ListQuery from './ListQuery';
+import {formatJSON, getApiUrl} from './module/linkApiFormat';
 
 const Screen1 = props => {
   const {navigation} = props;
+  const dispatch = useDispatch();
+  const {getMethodData, getMethodStatus} = useSelector(
+    state => state.getMethod,
+  );
+  const {postMethodData, postMethodStatus} = useSelector(
+    state => state.postMethod,
+  );
+  const {putMethodData, putMethodStatus} = useSelector(
+    state => state.putMethod,
+  );
+  const {deleteMethodData, deleteMethodStatus} = useSelector(
+    state => state.deleteMethod,
+  );
+
   const [link, setlink] = React.useState('');
   const [method, setmethod] = React.useState('get'); // Khởi tạo mặc định cho method
   const [listQuery, setListQuery] = React.useState([
@@ -14,55 +34,6 @@ const Screen1 = props => {
   ]);
   const [body, setbody] = React.useState('');
   const [output, setoutput] = React.useState('');
-
-  const addQuery = () => {
-    setListQuery(prevList => [...prevList, {parameters: '', value: ''}]);
-  };
-
-  const removeQuery = indexToRemove => {
-    setListQuery(prevList => {
-      return prevList.filter((_, index) => index !== indexToRemove);
-    });
-  };
-
-  const updateQuery = (index, updatedQuery) => {
-    setListQuery(prevList => {
-      return prevList.map((query, idx) => {
-        if (idx === index) {
-          return updatedQuery;
-        }
-        return query;
-      });
-    });
-  };
-
-  const objectToQueryString = obj => {
-    const parts = [];
-
-    for (let key in obj) {
-      if (obj.hasOwnProperty(key) && obj[key]) {
-        parts.push(`${encodeURIComponent(obj[key])}`);
-      }
-    }
-
-    return parts.join('=');
-  };
-
-  const validateAndPrefixLink = linkValue => {
-    // Check if link already has a protocol (http:// or https://)
-    const hasProtocol = /^https?:\/\//i.test(linkValue);
-
-    // If no protocol, prepend http://
-    return hasProtocol ? linkValue : `http://${linkValue}`;
-  };
-
-  const getApiUrl = () => {
-    const validatedLink = validateAndPrefixLink(link);
-    const queryString = listQuery
-      .map(query => objectToQueryString(query))
-      .join('&');
-    return `${validatedLink}?${queryString}`;
-  };
 
   const run = async () => {
     switch (method) {
@@ -72,49 +43,110 @@ const Screen1 = props => {
       case 'post':
         runPost();
         break;
-      // case 'put':
-      //   runPut();
-      //   break;
-      // case 'delete':
-      //   runDelete();
-      //   break;
+      case 'put':
+        runPut();
+        break;
+      case 'delete':
+        runDelete();
+        break;
       default:
         break;
     }
   };
 
+  React.useEffect(() => {
+    if (method === 'get') {
+      if (getMethodStatus === 'succeeded' && getMethodData) {
+        setoutput(formatJSON(getMethodData));
+      }
+
+      if (getMethodStatus === 'loading') {
+        setoutput('loading ...');
+      }
+
+      if (getMethodStatus === 'failed') {
+        setoutput(formatJSON(getMethodData));
+      }
+    }
+  }, [getMethodStatus, getMethodData, method]);
+  React.useEffect(() => {
+    if (method === 'post') {
+      if (postMethodStatus === 'succeeded' && postMethodData) {
+        setoutput(formatJSON(postMethodData));
+        dispatch(clearDataPost());
+      }
+
+      if (postMethodStatus === 'loading') {
+        setoutput('loading ...');
+      }
+
+      if (postMethodStatus === 'failed') {
+        setoutput(postMethodData);
+      }
+    }
+  }, [dispatch, method, postMethodData, postMethodStatus]);
+  React.useEffect(() => {
+    if (method === 'put') {
+      if (putMethodStatus === 'succeeded' && putMethodData) {
+        setoutput(formatJSON(putMethodData));
+      }
+
+      if (putMethodStatus === 'loading') {
+        setoutput('loading ...');
+      }
+
+      if (putMethodStatus === 'failed') {
+        setoutput(formatJSON(putMethodData));
+      }
+    }
+  }, [method, putMethodData, putMethodStatus]);
+  React.useEffect(() => {
+    if (method === 'delete') {
+      if (deleteMethodStatus === 'succeeded' && deleteMethodData) {
+        setoutput(formatJSON(deleteMethodData));
+      }
+
+      if (deleteMethodStatus === 'loading') {
+        setoutput('loading ...');
+      }
+
+      if (deleteMethodStatus === 'failed') {
+        setoutput(formatJSON(deleteMethodData));
+      }
+    }
+  }, [method, deleteMethodStatus, deleteMethodData]);
+
   const runGet = async () => {
-    try {
-      const response = await AxiosInstance().get(getApiUrl());
-      const formattedResponse = formatJSON(response);
-      setoutput(formattedResponse);
-    } catch (error) {
-      // console.log(error);
-    }
+    dispatch(getMethod(getApiUrl(link, listQuery)));
   };
-
   const runPost = async () => {
-    console.log(JSON.parse(body));
-    try {
-      const response = await AxiosInstance().post(
-        getApiUrl(),
-        JSON.parse(body),
-      );
-      const formattedResponse = formatJSON(response);
-      setoutput(formattedResponse);
-    } catch (error) {
-      console.log(error);
-    }
+    dispatch(
+      postMethod({
+        link: getApiUrl(link, listQuery),
+        body: JSON.parse(body || '{}'),
+      }),
+    );
   };
-  const formatJSON = data => {
-    try {
-      return JSON.stringify(data, null, 2);
-    } catch (error) {
-      console.error('Error formatting JSON:', error);
-      return 'Error formatting JSON';
-    }
+  const runPut = async () => {
+    dispatch(
+      putMethod({
+        link: getApiUrl(link, listQuery),
+        body: JSON.parse(body || '{}'),
+      }),
+    );
+  };
+  const runDelete = async () => {
+    dispatch(
+      deleteMethod({
+        link: getApiUrl(link, listQuery),
+        body: JSON.parse(body || '{}'),
+      }),
+    );
   };
 
+  const clearOutput = () => {
+    setoutput('');
+  };
   return (
     <ScrollView>
       <View padding-5>
@@ -155,21 +187,7 @@ const Screen1 = props => {
                 <Text text60 margin-5>
                   Query Parameters
                 </Text>
-                {listQuery.map((item, index) => {
-                  return (
-                    <ParameterInput
-                      setData={data => updateQuery(index, data)}
-                      last={index == listQuery.length - 1}
-                      onPressButton={() => {
-                        if (index == listQuery.length - 1) {
-                          addQuery();
-                        } else {
-                          removeQuery(index);
-                        }
-                      }}
-                    />
-                  );
-                })}
+                <ListQuery setListQuery={setListQuery} listQuery={listQuery} />
               </View>
               <View marginT-10 br20 style={{borderWidth: 1}}>
                 <Text text60 margin-5>
@@ -196,6 +214,9 @@ const Screen1 = props => {
               <ScrollView>
                 <Text green10>{output}</Text>
               </ScrollView>
+            </View>
+            <View marginT-5>
+              <Button label={'Clear'} onPress={() => clearOutput()} />
             </View>
           </View>
         </View>
