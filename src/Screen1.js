@@ -7,9 +7,9 @@ import {deleteMethod, clearDataDelete} from './redux/deleteMethod_reducer';
 import {Button, Text, View, Picker, TextField} from 'react-native-ui-lib';
 import * as React from 'react';
 import InputView from './InputView';
-import {ScrollView, TextInput} from 'react-native';
+import {ScrollView, TextInput, ToastAndroid, Pressable} from 'react-native';
 import ListQuery from './ListQuery';
-import {formatJSON, getApiUrl} from './module/linkApiFormat';
+import {formatJSON, getApiUrl, copyToClipboard} from './module/linkApiFormat';
 
 const Screen1 = props => {
   const {navigation} = props;
@@ -28,7 +28,7 @@ const Screen1 = props => {
   );
 
   const [link, setlink] = React.useState('');
-  const [method, setmethod] = React.useState('get'); // Khởi tạo mặc định cho method
+  const [method, setmethod] = React.useState('get');
   const [listQuery, setListQuery] = React.useState([
     {parameters: '', value: ''},
   ]);
@@ -212,7 +212,22 @@ const Screen1 = props => {
             <Text text50>OUT PUT</Text>
             <View br20 padding-5 style={{borderWidth: 1}} height={400}>
               <ScrollView>
-                <Text green10>{output}</Text>
+                <Pressable
+                  onLongPress={() => {
+                    copyToClipboard(output);
+                    ToastAndroid.show(
+                      'Copied to Clipboard',
+                      ToastAndroid.SHORT,
+                    );
+                  }}>
+                  <TextInput
+                    style={{color: 'green', width: '100%', height: '100'}}
+                    value={output}
+                    readOnly={true}
+                    scrollEnabled={true}
+                    multiline={true}
+                  />
+                </Pressable>
               </ScrollView>
             </View>
             <View marginT-5>

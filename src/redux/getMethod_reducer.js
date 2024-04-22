@@ -5,7 +5,9 @@ export const getMethod = createAsyncThunk(
   '/getMethod',
   async (data, thunkAPI) => {
     try {
+      console.log('link >>> ' + data);
       const response = await AxiosInstance().get(data);
+      console.log('response >>> ' + response);
       if (response.error) {
         return thunkAPI.rejectWithValue(response);
       }
